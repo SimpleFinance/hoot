@@ -34,6 +34,8 @@ import org.apache.http.conn.ssl.X509HostnameVerifier;
 
 import android.util.Log;
 
+import com.twotoasters.android.hoot.HootRequest.Operation;
+
 class HootTransportHttpUrlConnection implements HootTransport {
 	
     @Override
@@ -162,7 +164,7 @@ class HootTransportHttpUrlConnection implements HootTransport {
         switch (request.getOperation()) {
             case DELETE:
                 connection.setRequestMethod("DELETE");
-                connection.setDoOutput(true);
+                connection.setDoOutput(false);
                 break;
             case POST:
                 connection.setRequestMethod("POST");
@@ -180,7 +182,8 @@ class HootTransportHttpUrlConnection implements HootTransport {
                 break;
         }
 
-        if (mStreamingMode == StreamingMode.CHUNKED) {
+        if (request.getOperation() != Operation.DELETE
+                && mStreamingMode == StreamingMode.CHUNKED) {
             connection.setChunkedStreamingMode(0);
         }
 
