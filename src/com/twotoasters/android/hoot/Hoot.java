@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Two Toasters, LLC
+ * Copyright (C) 2013 Simple Finance Technology Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +28,10 @@ public class Hoot {
 
     public static Hoot createInstanceWithBaseUrl(String baseUrl) {
         return new Hoot(baseUrl);
+    }
+    
+    public static Hoot createInstanceWithBaseUrl(String baseUrl, HootPinnedCerts certs) {
+      return new Hoot(baseUrl, certs);
     }
 
     public HootRequest createRequest() {
@@ -75,14 +80,20 @@ public class Hoot {
     private String mBasicAuthPassword = null;
     private X509HostnameVerifier mSSLHostNameVerifier = SSLSocketFactory.STRICT_HOSTNAME_VERIFIER;
     private String mBaseUrl;
+    private HootPinnedCerts mCerts = null;
 
     private int mTimeout = 15 * 1000;
 
     private HootTransport mTransport;
     private HootGlobalDeserializer mGlobalDeserializer;
 
-    private Hoot(String baseUrl) {
+    private Hoot(String baseUrl, HootPinnedCerts certs) {
         mBaseUrl = baseUrl;
+        mCerts = certs;
+    }
+    
+    private Hoot(String baseUrl) {
+        this(baseUrl, null);
     }
 
     String getBaseUrl() {
@@ -125,7 +136,7 @@ public class Hoot {
         } else {
             mTransport = new HootTransportHttpClient();
         }
-        mTransport.setup(this);
+        mTransport.setup(this, mCerts);
     }
 
     HootGlobalDeserializer getGlobalDeserializer() {
