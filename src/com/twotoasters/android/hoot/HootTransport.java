@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Two Toasters, LLC
+ * Copyright (C) 2013 Simple Finance Technology Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +20,8 @@ package com.twotoasters.android.hoot;
 interface HootTransport {
 
     public void setup(Hoot hoot);
+    
+    public void setup(Hoot hoot, HootPinnedCerts certs);
 
     public HootResult synchronousExecute(HootRequest request);
 

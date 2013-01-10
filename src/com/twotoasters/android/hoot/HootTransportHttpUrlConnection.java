@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Two Toasters, LLC
+ * Copyright (C) 2013 Simple Finance Technology Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +29,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.conn.ssl.X509HostnameVerifier;
@@ -37,11 +39,22 @@ import android.util.Log;
 import com.twotoasters.android.hoot.HootRequest.Operation;
 
 class HootTransportHttpUrlConnection implements HootTransport {
+	private SSLSocketFactory mSSLSocketFactory;
+	
+	@Override
+	public void setup(Hoot hoot) {
+	  setup(hoot, null);
+	}
 	
     @Override
-    public void setup(Hoot hoot) {
+    public void setup(Hoot hoot, HootPinnedCerts certs) {
         mTimeout = hoot.getTimeout();
         mSSLHostNameVerifier = hoot.getSSLHostNameVerifier();
+        if (certs != null) {
+          mSSLSocketFactory = certs.getSslSocketFactory(); 
+        } else {
+          mSSLSocketFactory = null;
+        }
     }
 
     @Override
@@ -61,6 +74,9 @@ class HootTransportHttpUrlConnection implements HootTransport {
             if (connection instanceof HttpsURLConnection) {
             	HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
             	httpsConnection.setHostnameVerifier(mSSLHostNameVerifier);
+            	if (mSSLSocketFactory != null) {
+            	  httpsConnection.setSSLSocketFactory(mSSLSocketFactory);
+            	}
             }
             connection.setConnectTimeout(mTimeout);
             connection.setReadTimeout(mTimeout);

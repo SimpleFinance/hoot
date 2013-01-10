@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Two Toasters, LLC
+ * Copyright (C) 2013 Simple Finance Technology Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,32 +62,42 @@ class HootTransportHttpClient implements HootTransport {
             .getSimpleName();
 
     @Override
+    public void setup(Hoot hoot, HootPinnedCerts certs) {
+      HttpParams params = new BasicHttpParams();
+      ConnManagerParams.setMaxTotalConnections(params, 10);
+      ConnManagerParams.setTimeout(params, hoot.getTimeout());
+      HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
+      HttpConnectionParams.setConnectionTimeout(params, hoot.getTimeout());
+      HttpConnectionParams.setSoTimeout(params, hoot.getTimeout());
+      HttpConnectionParams.setTcpNoDelay(params, true);
+
+      SchemeRegistry schemeRegistry = new SchemeRegistry();
+      schemeRegistry.register(new Scheme("http", PlainSocketFactory
+              .getSocketFactory(), 80));
+      SSLSocketFactory sslSocketFactory;
+      if (certs != null) {
+        sslSocketFactory = certs.getApacheSslSocketFactory();
+      } else {
+        sslSocketFactory = SSLSocketFactory.getSocketFactory();
+      }
+      sslSocketFactory.setHostnameVerifier(hoot.getSSLHostNameVerifier());
+      schemeRegistry.register(new Scheme("https", sslSocketFactory, 443));
+
+      ClientConnectionManager cm = new ThreadSafeClientConnManager(params,
+              schemeRegistry);
+      mClient = new DefaultHttpClient(cm, params);
+      if (hoot.isBasicAuth()) {
+          mClient.getCredentialsProvider().setCredentials(
+                  AuthScope.ANY,
+                  new UsernamePasswordCredentials(
+                          hoot.getBasicAuthUsername(), hoot
+                                  .getBasicAuthPassword()));
+      }
+    }
+    
+    @Override
     public void setup(Hoot hoot) {
-        HttpParams params = new BasicHttpParams();
-        ConnManagerParams.setMaxTotalConnections(params, 10);
-        ConnManagerParams.setTimeout(params, hoot.getTimeout());
-        HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
-        HttpConnectionParams.setConnectionTimeout(params, hoot.getTimeout());
-        HttpConnectionParams.setSoTimeout(params, hoot.getTimeout());
-        HttpConnectionParams.setTcpNoDelay(params, true);
-
-        SchemeRegistry schemeRegistry = new SchemeRegistry();
-        schemeRegistry.register(new Scheme("http", PlainSocketFactory
-                .getSocketFactory(), 80));
-        SSLSocketFactory sslSocketFactory = SSLSocketFactory.getSocketFactory();
-        sslSocketFactory.setHostnameVerifier(hoot.getSSLHostNameVerifier());
-        schemeRegistry.register(new Scheme("https", sslSocketFactory, 443));
-
-        ClientConnectionManager cm = new ThreadSafeClientConnManager(params,
-                schemeRegistry);
-        mClient = new DefaultHttpClient(cm, params);
-        if (hoot.isBasicAuth()) {
-            mClient.getCredentialsProvider().setCredentials(
-                    AuthScope.ANY,
-                    new UsernamePasswordCredentials(
-                            hoot.getBasicAuthUsername(), hoot
-                                    .getBasicAuthPassword()));
-        }
+        setup(hoot, null);
     }
 
     @Override
