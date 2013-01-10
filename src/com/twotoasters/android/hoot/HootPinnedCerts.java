@@ -35,7 +35,7 @@ public class HootPinnedCerts {
   private final TrustManager[] trustManagers;
 
   public HootPinnedCerts(Context context, String... names) throws Exception {
-    keyStore = KeyStore.getInstance("JKS");
+    keyStore = KeyStore.getInstance("BKS");
     keyStore.load(null, null);
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
     
