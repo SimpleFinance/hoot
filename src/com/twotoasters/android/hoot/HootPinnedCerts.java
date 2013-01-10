@@ -27,20 +27,21 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.http.conn.ssl.SSLSocketFactory;
 
+import android.content.Context;
 import android.util.Log;
 
 public class HootPinnedCerts {
   private final KeyStore keyStore;
   private final TrustManager[] trustManagers;
 
-  public HootPinnedCerts(String... names) throws Exception {
+  public HootPinnedCerts(Context context, String... names) throws Exception {
     keyStore = KeyStore.getInstance("JKS");
     keyStore.load(null, null);
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
     
     int i = 0;
     for (String name : names) {
-      Certificate cert = certificateFactory.generateCertificate(getClass().getResourceAsStream(name));
+      Certificate cert = certificateFactory.generateCertificate(context.getAssets().open(name));
       keyStore.setCertificateEntry("trusted-" + Integer.toString(i++), cert);
     }
     
