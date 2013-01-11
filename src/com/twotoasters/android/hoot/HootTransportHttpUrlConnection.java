@@ -69,7 +69,9 @@ class HootTransportHttpUrlConnection implements HootTransport {
         HttpURLConnection connection = null;
         try {
             String url = request.buildUri().toString();
-            Log.v(TAG, "Executing [" + url + "]");
+            if (BuildConfig.DEBUG) {
+                Log.v(TAG, "Executing [" + url + "]");
+            }
             connection = (HttpURLConnection) new URL(url).openConnection();
             if (connection instanceof HttpsURLConnection) {
             	HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
@@ -92,9 +94,11 @@ class HootTransportHttpUrlConnection implements HootTransport {
             }
             HootResult hootResult = request.getResult();
             hootResult.setResponseCode(connection.getResponseCode());
-            Log.d(TAG,
-                    " - received response code ["
-                            + connection.getResponseCode() + "]");
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG,
+                        " - received response code ["
+                                + connection.getResponseCode() + "]");
+            }
             if (request.getResult().isSuccess()) {
                 hootResult.setHeaders(connection.getHeaderFields());
                 hootResult.setResponseStream(new BufferedInputStream(connection

@@ -109,10 +109,12 @@ public class HootResult {
 
     void deserializeResult(HootGlobalDeserializer globalDeserializer,
             Class<?> expectedType) throws IOException {
-        Log.v(TAG,
-                globalDeserializer == null ? (mDeserializer == null ? "No deserializer"
-                        : "Request deserializer")
-                        : "Global deserializer");
+        if (BuildConfig.DEBUG) {
+            Log.v(TAG,
+                    globalDeserializer == null ? (mDeserializer == null ? "No deserializer"
+                            : "Request deserializer")
+                            : "Global deserializer");
+        }
         // see if we need to read out to a string. Either we have no
         // deserializer or we do and it operates on a string.
         if (mDeserializer == null

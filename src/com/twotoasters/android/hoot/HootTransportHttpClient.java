@@ -57,7 +57,6 @@ import org.apache.http.protocol.HTTP;
 import android.util.Log;
 
 class HootTransportHttpClient implements HootTransport {
-
     private static final String TAG = HootTransportHttpClient.class
             .getSimpleName();
 
@@ -150,7 +149,9 @@ class HootTransportHttpClient implements HootTransport {
 
         InputStream is = null;
         try {
-            Log.v(TAG, "URI: [" + requestBase.getURI().toString() + "]");
+            if (BuildConfig.DEBUG) {
+                Log.v(TAG, "URI: [" + requestBase.getURI().toString() + "]");
+            }
             HttpResponse response = mClient.execute(requestBase);
 
             if (response != null) {

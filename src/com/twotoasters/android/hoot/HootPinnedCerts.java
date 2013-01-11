@@ -31,6 +31,9 @@ import android.content.Context;
 import android.util.Log;
 
 public class HootPinnedCerts {
+  private static final String TAG = HootTransportHttpClient.class
+      .getSimpleName();
+  
   private final KeyStore keyStore;
   private final TrustManager[] trustManagers;
 
@@ -54,7 +57,9 @@ public class HootPinnedCerts {
     try {
       return new SSLSocketFactory(keyStore);
     } catch (GeneralSecurityException e) {
-      Log.e("HOOT", "Error initializing pinned SSL factory. Using default.");
+      if (BuildConfig.DEBUG) {
+        Log.e(TAG, "Error initializing pinned SSL factory. Using default.");
+      }
       return SSLSocketFactory.getSocketFactory();
     }
   }
@@ -68,7 +73,9 @@ public class HootPinnedCerts {
       sslContext.init(null, trustManagers, null);
       return sslContext.getSocketFactory();
     } catch (GeneralSecurityException e) {
-      Log.e("HOOT", "Error initializing pinned SSL factory. Using default.");
+      if (BuildConfig.DEBUG) {
+        Log.e(TAG, "Error initializing pinned SSL factory. Using default.");
+      }
       return null;
     }
   }
