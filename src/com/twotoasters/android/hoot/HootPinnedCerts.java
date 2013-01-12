@@ -18,12 +18,16 @@ package com.twotoasters.android.hoot;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 import org.apache.http.conn.ssl.SSLSocketFactory;
 
@@ -51,6 +55,47 @@ public class HootPinnedCerts {
     TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("X509");
     trustManagerFactory.init(keyStore);
     trustManagers = trustManagerFactory.getTrustManagers();
+    
+    // Patch the TrustManager
+    trustManagers[0] = new LessTrustingManager((X509TrustManager) trustManagers[0]);
+  }
+  
+  class LessTrustingManager implements X509TrustManager {
+    private final X509TrustManager delegate;
+    
+    LessTrustingManager(X509TrustManager delegate) {
+      this.delegate = delegate;
+    }
+    
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType)
+        throws CertificateException {
+      delegate.checkClientTrusted(chain, authType);
+    }
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType)
+        throws CertificateException {
+      // Android 2.3.3 is broken.
+      // If the cert is in our key store, we are done.
+      try {
+        if (keyStore.getCertificateAlias(chain[0]) != null) {
+          return;
+        }
+      } catch (KeyStoreException e) {
+        if (BuildConfig.DEBUG) {
+          Log.e(TAG, e.getMessage());
+        }
+        // Ignore.
+      }
+      // Otherwise, try to use the delegate.
+      delegate.checkServerTrusted(chain, authType);
+    }
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+      return delegate.getAcceptedIssuers();
+    }
   }
   
   public SSLSocketFactory getApacheSslSocketFactory() {
