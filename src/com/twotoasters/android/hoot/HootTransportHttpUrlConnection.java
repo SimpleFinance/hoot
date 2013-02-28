@@ -196,6 +196,10 @@ class HootTransportHttpUrlConnection implements HootTransport {
                 break;
             case HEAD:
                 connection.setRequestMethod("HEAD");
+
+                // Disable GZip encoding for a HEAD request to fix a strange
+                // java.io.EOFException in GZIPInputStream.
+                connection.setRequestProperty("Accept-Encoding", "identity");
                 break;
             default:
                 connection.setRequestMethod("GET");
