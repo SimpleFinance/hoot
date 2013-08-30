@@ -1,8 +1,10 @@
 apply plugin: 'android-library'
 
+repositories { mavenCentral() }
+
 dependencies {
     compile 'com.android.support:support-v4:18.0.+'
-    compile files('libs/commons-io-2.4.jar')
+    compile 'commons-io:commons-io:2.4'
 }
 
 android {
