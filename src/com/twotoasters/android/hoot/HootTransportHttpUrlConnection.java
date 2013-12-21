@@ -40,18 +40,18 @@ import com.twotoasters.android.hoot.HootRequest.Operation;
 
 class HootTransportHttpUrlConnection implements HootTransport {
 	private SSLSocketFactory mSSLSocketFactory;
-	
+
 	@Override
 	public void setup(Hoot hoot) {
 	  setup(hoot, null);
 	}
-	
+
     @Override
     public void setup(Hoot hoot, HootPinnedCerts certs) {
         mTimeout = hoot.getTimeout();
         mSSLHostNameVerifier = hoot.getSSLHostNameVerifier();
         if (certs != null) {
-          mSSLSocketFactory = certs.getSslSocketFactory(); 
+          mSSLSocketFactory = certs.getSslSocketFactory();
         } else {
           mSSLSocketFactory = null;
         }
@@ -104,6 +104,7 @@ class HootTransportHttpUrlConnection implements HootTransport {
                 hootResult.setResponseStream(new BufferedInputStream(connection
                         .getInputStream()));
             } else {
+                hootResult.setHeaders(connection.getHeaderFields());
                 hootResult.setResponseStream(new BufferedInputStream(connection
                         .getErrorStream()));
             }
@@ -137,7 +138,7 @@ class HootTransportHttpUrlConnection implements HootTransport {
     // END OF PUBLIC INTERFACE
     // -------------------------------------------------------------------------
     private int mTimeout = 15 * 1000;
-    
+
     private X509HostnameVerifier mSSLHostNameVerifier;
 
     private enum StreamingMode {
