@@ -16,112 +16,140 @@
 
 package com.twotoasters.android.hoot;
 
-import java.security.GeneralSecurityException;
+import android.content.Context;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyFactory;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.cert.Certificate;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.http.conn.ssl.SSLSocketFactory;
-
-import android.content.Context;
-import android.util.Log;
-
+/**
+ * Handles certificate pinning for secure HTTPS requests for use with
+ * {@link com.twotoasters.android.hoot.Hoot}.
+ * <p/>
+ * Loads public keys encoded in the {@code DER} format from the application's assets directory.
+ */
 public class HootPinnedCerts {
-  private static final String TAG = HootTransportHttpClient.class
-      .getSimpleName();
-  
-  private final KeyStore keyStore;
-  private final TrustManager[] trustManagers;
+    private final SSLSocketFactory mSecureSocketFactory;
 
-  public HootPinnedCerts(Context context, String... names) throws Exception {
-    keyStore = KeyStore.getInstance("BKS");
-    keyStore.load(null, null);
-    CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-    
-    int i = 0;
-    for (String name : names) {
-      Certificate cert = certificateFactory.generateCertificate(context.getAssets().open(name));
-      keyStore.setCertificateEntry("trusted-" + Integer.toString(i++), cert);
-    }
-    
-    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance("X509");
-    trustManagerFactory.init(keyStore);
-    trustManagers = trustManagerFactory.getTrustManagers();
-    
-    // Patch the TrustManager
-    trustManagers[0] = new LessTrustingManager((X509TrustManager) trustManagers[0]);
-  }
-  
-  class LessTrustingManager implements X509TrustManager {
-    private final X509TrustManager delegate;
-    
-    LessTrustingManager(X509TrustManager delegate) {
-      this.delegate = delegate;
-    }
-    
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType)
-        throws CertificateException {
-      delegate.checkClientTrusted(chain, authType);
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType)
-        throws CertificateException {
-      // Android 2.3.3 is broken.
-      // If the cert is in our key store, we are done.
-      try {
-        if (keyStore.getCertificateAlias(chain[0]) != null) {
-          return;
+    public HootPinnedCerts(Context context, String... paths) throws IOException,
+            NoSuchAlgorithmException, InvalidKeySpecException, KeyManagementException {
+        final Set<PublicKey> keys = new HashSet<PublicKey>();
+        for (String p : paths) {
+            keys.add(getPubKey(context, p));
         }
-      } catch (KeyStoreException e) {
-        if (BuildConfig.DEBUG) {
-          Log.e(TAG, e.getMessage());
+
+        // Initialize our sole TrustManager
+        TrustManager[] tm = { new PubKeyManager(keys) };
+
+        // Initialize our secure socket factory
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tm, null);
+        mSecureSocketFactory = sslContext.getSocketFactory();
+    }
+
+    /**
+     * Returns an {@link javax.net.ssl.SSLSocketFactory} constructed with the
+     * {@link PubKeyManager} as the sole {@link javax.net.ssl.TrustManager}.
+     */
+    public SSLSocketFactory getSslSocketFactory() {
+        return mSecureSocketFactory;
+    }
+
+    /**
+     * Returns a public key loaded from the given path relative to the assets directory.
+     * <p/>
+     * The key must be stored in the {@code DER} format.
+     */
+    private static PublicKey getPubKey(Context context, String path) throws IOException,
+            NoSuchAlgorithmException, InvalidKeySpecException {
+        InputStream in = context.getAssets().open(path);
+
+        // Read the key file
+        byte[] bytes = new byte[in.available()];
+        in.read(bytes);
+        in.close();
+
+        // Load the public key
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(bytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(spec);
+    }
+
+    /**
+     * Manages public key pinning for use with an {@link javax.net.ssl.HttpsURLConnection}.
+     * <p/>
+     * Based on samples from
+     * <a href="https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning#Android">owasp.org</a>.
+     */
+    private static class PubKeyManager implements X509TrustManager {
+        private final Set<PublicKey> mPubKeys =
+                new HashSet<PublicKey>();
+
+        public PubKeyManager(Set<PublicKey> keys) {
+            if (keys == null) {
+                throw new IllegalArgumentException("key set is null");
+            }
+            mPubKeys.addAll(keys);
         }
-        // Ignore.
-      }
-      // Otherwise, try to use the delegate.
-      delegate.checkServerTrusted(chain, authType);
-    }
 
-    @Override
-    public X509Certificate[] getAcceptedIssuers() {
-      return delegate.getAcceptedIssuers();
-    }
-  }
-  
-  public SSLSocketFactory getApacheSslSocketFactory() {
-    try {
-      return new SSLSocketFactory(keyStore);
-    } catch (GeneralSecurityException e) {
-      if (BuildConfig.DEBUG) {
-        Log.e(TAG, "Error initializing pinned SSL factory. Using default.");
-      }
-      return SSLSocketFactory.getSocketFactory();
-    }
-  }
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            throw new UnsupportedOperationException("getAcceptedIssuers not supported");
+        }
 
-  /**
-   * @return null on failure.
-   */
-  public javax.net.ssl.SSLSocketFactory getSslSocketFactory() {
-    try {
-      SSLContext sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(null, trustManagers, null);
-      return sslContext.getSocketFactory();
-    } catch (GeneralSecurityException e) {
-      if (BuildConfig.DEBUG) {
-        Log.e(TAG, "Error initializing pinned SSL factory. Using default.");
-      }
-      return null;
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType)
+                throws CertificateException {
+            throw new UnsupportedOperationException("checkClientTrusted not supported");
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType)
+                throws CertificateException {
+            if (chain == null) {
+                throw new IllegalArgumentException("X509Certificate array is null");
+            }
+
+            if (!(chain.length > 0)) {
+                throw new IllegalArgumentException("X509Certificate is empty");
+            }
+
+            if (!(null != authType && authType.equalsIgnoreCase("RSA"))) {
+                throw new CertificateException("authType is not RSA");
+            }
+
+            // Perform customary SSL/TLS checks
+            try {
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
+                tmf.init((KeyStore) null);
+
+                for (TrustManager trustManager : tmf.getTrustManagers()) {
+                    ((X509TrustManager) trustManager).checkServerTrusted(chain, authType);
+                }
+            } catch (Exception e) {
+                throw new CertificateException(e);
+            }
+
+            PublicKey pubKey = chain[0].getPublicKey();
+            if (!mPubKeys.contains(pubKey)) {
+                throw new CertificateException("Invalid public key: " + pubKey.toString());
+            }
+        }
     }
-  }
 }

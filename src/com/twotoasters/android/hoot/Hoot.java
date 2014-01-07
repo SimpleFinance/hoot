@@ -21,7 +21,6 @@ package com.twotoasters.android.hoot;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.X509HostnameVerifier;
 
-import android.os.Build;
 import android.util.Base64;
 
 public class Hoot {
@@ -29,7 +28,7 @@ public class Hoot {
     public static Hoot createInstanceWithBaseUrl(String baseUrl) {
         return new Hoot(baseUrl);
     }
-    
+
     public static Hoot createInstanceWithBaseUrl(String baseUrl, HootPinnedCerts certs) {
       return new Hoot(baseUrl, certs);
     }
@@ -56,7 +55,7 @@ public class Hoot {
         mBasicAuthUsername = username;
         mBasicAuthPassword = password;
     }
-    
+
     public void setSSLHostNameVerifier(X509HostnameVerifier sslHostNameVerifier) {
     	mSSLHostNameVerifier = sslHostNameVerifier;
     }
@@ -91,7 +90,7 @@ public class Hoot {
         mBaseUrl = baseUrl;
         mCerts = certs;
     }
-    
+
     private Hoot(String baseUrl) {
         this(baseUrl, null);
     }
@@ -111,7 +110,7 @@ public class Hoot {
     String getBasicAuthPassword() {
         return mBasicAuthPassword;
     }
-    
+
     X509HostnameVerifier getSSLHostNameVerifier() {
     	return mSSLHostNameVerifier;
     }
@@ -131,11 +130,7 @@ public class Hoot {
     }
 
     private void setupTransport() {
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.FROYO) {
-            mTransport = new HootTransportHttpUrlConnection();
-        } else {
-            mTransport = new HootTransportHttpClient();
-        }
+        mTransport = new HootTransportHttpUrlConnection();
         mTransport.setup(this, mCerts);
     }
 
