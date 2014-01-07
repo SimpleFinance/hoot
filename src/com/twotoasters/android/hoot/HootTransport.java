@@ -20,7 +20,7 @@ package com.twotoasters.android.hoot;
 interface HootTransport {
 
     public void setup(Hoot hoot);
-    
+
     public void setup(Hoot hoot, HootPinnedCerts certs);
 
     public HootResult synchronousExecute(HootRequest request);
