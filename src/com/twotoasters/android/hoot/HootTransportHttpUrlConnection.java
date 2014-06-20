@@ -17,6 +17,13 @@
 
 package com.twotoasters.android.hoot;
 
+import com.twotoasters.android.hoot.HootRequest.Operation;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
+
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -30,13 +37,6 @@ import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
-
-import android.util.Log;
-
-import com.twotoasters.android.hoot.HootRequest.Operation;
 
 class HootTransportHttpUrlConnection implements HootTransport {
 	private SSLSocketFactory mSSLSocketFactory;
@@ -108,7 +108,15 @@ class HootTransportHttpUrlConnection implements HootTransport {
                 hootResult.setResponseStream(new BufferedInputStream(connection
                         .getErrorStream()));
             }
-            request.deserializeResult();
+
+            switch (request.getOperation()) {
+                case HEAD:
+                    // We don't give a fuck
+                    // -  "The server MUST NOT return a message-body in the response."
+                    break;
+                default:
+                    request.deserializeResult();
+            }
         } catch (Exception e) {
             request.getResult().setException(e);
             e.printStackTrace();
