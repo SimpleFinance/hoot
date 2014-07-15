@@ -130,10 +130,6 @@ public class HootPinnedCerts {
                 throw new IllegalArgumentException("X509Certificate is empty");
             }
 
-            if (!(null != authType && authType.equalsIgnoreCase("RSA"))) {
-                throw new CertificateException("authType is not RSA");
-            }
-
             // Perform customary SSL/TLS checks
             try {
                 TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
